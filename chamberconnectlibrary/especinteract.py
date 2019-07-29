@@ -116,7 +116,7 @@ class EspecTCP(object):
     def __init__(self, **kwargs):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setblocking(True)
-        self.socket.connect((kwargs.get('host'), kwargs.get('port', 10001)))
+        self.socket.connect((kwargs.get('host'), kwargs.get('port', 57732)))
         self.address = kwargs.get('address', None)
         self.delimeter = kwargs.get('delimeter', '\r\n')
 
