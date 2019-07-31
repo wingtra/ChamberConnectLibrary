@@ -7,11 +7,11 @@ Upper level interface for Espec Corp. Controllers (just the P300 for now)
 #pylint: disable=R0902,R0904
 import datetime
 import time
-from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
-from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
-from chamberconnectlibrary.p300 import P300
-from chamberconnectlibrary.scp220 import SCP220
-from chamberconnectlibrary.especinteract import EspecError
+from controllerinterface import ControllerInterface, exclusive
+from controllerinterface import ControllerInterfaceError
+from p300 import P300
+from scp220 import SCP220
+from especinteract import EspecError
 
 class Espec(ControllerInterface):
     '''

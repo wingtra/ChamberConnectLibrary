@@ -8,9 +8,9 @@ Upper level interface for the Watlow F4 controller
 import datetime
 import re
 import time
-from chamberconnectlibrary.modbus import ModbusError, ModbusRTU, ModbusTCP
-from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
-from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
+from modbus import ModbusError, ModbusRTU, ModbusTCP
+from controllerinterface import ControllerInterface, exclusive
+from controllerinterface import ControllerInterfaceError
 
 class WatlowF4(ControllerInterface):
     '''
