@@ -1,5 +1,5 @@
 # ChamberConnectLibrary
-Python library for interfacing with Espec North America chambers with P300, SCP-220, Watlow F4T &amp; Watlow F4S/D controllers.
+Python library for interfacing with Espec North America temperature chambers via ethernet connection. This is a fork from upstream which is adapted to work with our temperature chamber SU-242. Unfortunatly the upstream library is using python 2.7 with no update in sight. 
 
 ## Requirements
 python 2.7.x
