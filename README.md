@@ -17,13 +17,6 @@ To ensure that the current version is used uninstall and then reinstall the libr
 
 To test run chamberconnectlibrary-test.py(on windows using COM port #3, test script is located in Python2.7\Scripts directory)
 
-P300: ```chamberconnectlibrary-test.py Espec Serial \\.\COM3 19200```
-
-SCP-220: ```chamberconnectlibrary-test.py EspecSCP220 Serial \\.\COM3 9600```
-
-Watlow F4T: ```chamberconnectlibrary-test.py WatlowF4T RTU \\.\COM3 38400```
-
-Watlow F4: ```chamberconnectlibrary-test.py WatlowF4 RTU \\.\COM3 19200```
 
 ## Documentation
 See [controllerinterface.md](controllerinterface.md)
