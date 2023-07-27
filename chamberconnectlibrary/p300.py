@@ -1,4 +1,4 @@
-﻿'''
+'''
 A direct implimentation of the P300's communication interface.
 
 :copyright: (C) Espec North America, INC.
@@ -10,7 +10,7 @@ update notice:
 '''
 #pylint: disable=W0703
 import re
-from especinteract import EspecSerial, EspecTCP
+from chamberconnectlibrary.especinteract import EspecSerial, EspecTCP
 
 def tryfloat(val, default):
     '''
