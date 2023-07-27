@@ -166,9 +166,9 @@ class EspecTCP(object):
         '''
         str_cmd = (f'{message}{self.delimiter}')
         self.socket.send(str_cmd.encode('ascii', 'ignore'))
-        recv = ''.encode('ascii', 'ignore') 
+        recv = ''
         while recv[0-len(self.delimiter):] != self.delimiter:
-            recv += self.socket.recv(1)
+            recv += self.socket.recv(1).decode('utf-8', 'replace')
         if recv.startswith('NA:'):
             errmsg = recv[3:0-len(self.delimiter)]
             descriptErr=ERROR_DESCIPTIONS.get(errmsg, 'missing description')
