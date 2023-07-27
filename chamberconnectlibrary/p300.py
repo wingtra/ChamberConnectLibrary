@@ -44,16 +44,9 @@ class P300(object):
         }
         self.ramprgms = 40
         if interface == 'Serial':
-            self.ctlr = EspecSerial(
-                port=kwargs.get('serialport'),
-                baud=kwargs.get('baudrate'),
-                address=kwargs.get('address')
-            )
+            self.ctlr = EspecSerial(**kwargs)
         else:
-            self.ctlr = EspecTCP(
-                host=kwargs.get('host'),
-                address=kwargs.get('address')
-            )
+            self.ctlr = EspecTCP(**kwargs)
 
     def __del__(self):
         self.close()

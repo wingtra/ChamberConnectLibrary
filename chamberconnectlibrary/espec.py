@@ -23,6 +23,7 @@ class Espec(ControllerInterface):
             "Serial" -- Use a hardware serial port
         adr (int): The address of the controller (default=1)
         host (str): The hostname (IP address) of the controller when interface="TCP"
+        port (int): The port to use when interface="TCP" (default=10001)
         serialport (str): The serial port to use when interface="Serial" (default=3(COM4))
         baudrate (int): The serial port's baud rate to use when interface="Serial" (default=9600)
         loops (int): The number of control loops the controller has (default=1, max=2)
@@ -78,12 +79,12 @@ class Espec(ControllerInterface):
         '''
         connect to the controller using the paramters provided on class initialization
         '''
-        args = {'serialport':self.serialport, 'baudrate':self.baudrate, 'host':self.host,
-                'address':self.adr}
+        keys_to_pass = ['serialport', 'baudrate', 'host', 'port', 'address']
+        kwargs = {k: v for k, v in self.kwargs.items() if k in keys_to_pass}
         if self.ctlr_type == 'P300':
-            self.client = P300(self.interface, **args)
+            self.client = P300(self.interface, **kwargs)
         elif self.ctlr_type == 'SCP220':
-            self.client = SCP220(self.interface, **args)
+            self.client = SCP220(self.interface, **kwargs)
         else:
             raise ValueError('"%s" is not a supported controller type' % self.ctlr_type)
 

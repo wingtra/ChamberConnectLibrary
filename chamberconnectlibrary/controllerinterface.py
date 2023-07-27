@@ -49,6 +49,7 @@ class ControllerInterface(metaclass=ABCMeta):
     def init_common(self, **kwargs):
         '''Setup properties of all controllers of the chamberconnectlibrary'''
         self.client = None
+        self.kwargs = kwargs
         self.host = kwargs.get('host')
         self.interface = kwargs.get('interface')
         self.adr = kwargs.get('adr', 1)
