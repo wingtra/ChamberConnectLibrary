@@ -6,7 +6,7 @@ SCP220 debug port handler.
 '''
 import struct
 import serial
-from scp220debug import SCP220DebugError, SCP220Debug
+from chamberconnectlibrary.scp220debug import SCP220DebugError, SCP220Debug
 
 
 class P300Debug(SCP220Debug):

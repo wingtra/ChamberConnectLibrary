@@ -3,10 +3,14 @@ A direct implimentation of the P300's communication interface.
 
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
+
+update notice:
+:copyright (c): 2020, Espec North America, INC.
+:updated to support Python 3 implementation
 '''
 #pylint: disable=W0703
 import re
-from especinteract import EspecSerial, EspecTCP
+from chamberconnectlibrary.especinteract import EspecSerial, EspecTCP
 
 def tryfloat(val, default):
     '''
@@ -40,16 +44,9 @@ class P300(object):
         }
         self.ramprgms = 40
         if interface == 'Serial':
-            self.ctlr = EspecSerial(
-                port=kwargs.get('serialport'),
-                baud=kwargs.get('baudrate'),
-                address=kwargs.get('address')
-            )
+            self.ctlr = EspecSerial(**kwargs)
         else:
-            self.ctlr = EspecTCP(
-                host=kwargs.get('host'),
-                address=kwargs.get('address')
-            )
+            self.ctlr = EspecTCP(**kwargs)
 
     def __del__(self):
         self.close()
@@ -80,6 +77,7 @@ class P300(object):
         '''
         return self.ctlr.interact(message)
 
+    # starting of P300 class methods here...to be tested in Python 3 env on P300.py
     def read_rom(self, display=False):
         '''
         Get the rom version of the controller
@@ -89,7 +87,7 @@ class P300(object):
         returns:
             rom version as a string
         '''
-        return self.ctlr.interact('ROM?%s' % (',DISP' if display else ''))
+        return (self.ctlr.interact('ROM?{}'.format(',DISP' if display else '')))
 
     def read_date(self):
         '''
@@ -98,7 +96,7 @@ class P300(object):
         returns:
             {"year":int,"month":int,"day":int}
         '''
-        rsp = self.ctlr.interact('DATE?').split('.')
+        rsp = ((self.ctlr.interact('DATE?'))).split('.')
         date = [rsp[0]] + rsp[1].split('/')
         return {'year':2000+int(date[0]), 'month':int(date[1]), 'day':int(date[2])}
 
@@ -109,7 +107,7 @@ class P300(object):
         returns:
             {"hour":int, "minute":int, "second":int}
         '''
-        time = self.ctlr.interact('TIME?').split(':')
+        time = ((self.ctlr.interact('TIME?'))).split(':')
         return {'hour':int(time[0]), 'minute':int(time[1]), 'second':int(time[2])}
 
     def read_date_time(self):
@@ -121,7 +119,9 @@ class P300(object):
         returns:
             {"year":int,"month":int,"day":int, "hour":int, "minute":int, "second":int}
         '''
-        date, time = self.ctlr.interact(['DATE?', 'TIME?'])
+        #date, time = self.ctlr.interact(['DATE?', 'TIME?'])
+        date = (self.ctlr.interact('DATE?'))        
+        time = (self.ctlr.interact('TIME?'))
         time = time.split(':')
         ret = {'hour':int(time[0]), 'minute':int(time[1]), 'second':int(time[2])}
         tmp_date = date.split('.')
@@ -138,7 +138,7 @@ class P300(object):
         returns:
             {"alarm":boolean, "single_step_done":boolean, "state_change":boolean, "GPIB":boolean}
         '''
-        srq = list(self.ctlr.interact('SRQ?'))
+        srq = list((self.ctlr.interact('SRQ?')))
         return {
             'alarm':srq[1] == '1',
             'single_step_done':srq[2] == '1',
@@ -153,7 +153,7 @@ class P300(object):
         returns:
             {"alarm":boolean, "single_step_done":boolean, "state_change":boolean, "GPIB":boolean}
         '''
-        mask = list(self.ctlr.interact('MASK?'))
+        mask = list((self.ctlr.interact('MASK?')))
         return {
             'alarm':mask[1] == '1',
             'single_step_done':mask[2] == '1',
@@ -168,7 +168,7 @@ class P300(object):
         returns:
             [int]
         '''
-        rsp = self.ctlr.interact('TIMER ON?').split(',')
+        rsp = ((self.ctlr.interact('TIMER ON?'))).split(',')
         return [int(t) for t in rsp[1:]]
 
     def read_timer_use(self):
@@ -178,7 +178,7 @@ class P300(object):
         returns:
             [int]
         '''
-        rsp = self.ctlr.interact('TIMER USE?').split(',')
+        rsp = ((self.ctlr.interact('TIMER USE?'))).split(',')
         return [int(t) for t in rsp[1:]]
 
     def read_timer_list_quick(self):
@@ -190,10 +190,9 @@ class P300(object):
             "mode"="STANDBY" or "OFF" or "CONSTANT" or "RUN"
             "pgmnum" and "pgmstep" only present when mode=="RUN"
         '''
+        get_rsp = (self.ctlr.interact('TIMER LIST?,0'))
         parsed = re.search(
-            r'(\w+)(?:,R[AO]M:(\d+),STEP(\d+))?,(\d+):(\d+)',
-            self.ctlr.interact('TIMER LIST?,0')
-        )
+            r'(\w+)(?:,R[AO]M:(\d+),STEP(\d+))?,(\d+):(\d+)', get_rsp)
         ret = {
             'mode':parsed.group(1),
             'time':{'hour':int(parsed.group(4)), 'minute':int(parsed.group(5))}
@@ -222,7 +221,7 @@ class P300(object):
             "pgmnum" and "step" only present when "mode"=="RUN"
             "days" only present when "repeat"=="weekly"
         '''
-        rsp = self.ctlr.interact('TIMER LIST?,1')
+        rsp = (self.ctlr.interact('TIMER LIST?,1'))
         parsed = re.search(
             r'1,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z/]+))?,(\d+):(\d+),(\w+)'
             r'(?:,R[AO]M:(\d+),STEP(\d+))?',
@@ -262,7 +261,7 @@ class P300(object):
             "date" only present when "repeat"=="once"
             "days" only present when "repeat"=="weekly"
         '''
-        rsp = self.ctlr.interact('TIMER LIST?,2')
+        rsp = (self.ctlr.interact('TIMER LIST?,2'))
         parsed = re.search(
             r'2,MODE(\d)(?:,(\d+).(\d+)/(\d+))?(?:,([A-Z]+))?,(\d+):(\d+),(\w+)',
             rsp
@@ -289,7 +288,7 @@ class P300(object):
         returns:
             [int]
         '''
-        rsp = self.ctlr.interact('ALARM?').split(',')
+        rsp = ((self.ctlr.interact('ALARM?'))).split(',')
         return [int(t) for t in rsp[1:]]
 
     def read_keyprotect(self):
@@ -299,7 +298,7 @@ class P300(object):
         returns:
             True if protection is enabled False if not
         '''
-        return self.ctlr.interact('KEYPROTECT?') == 'ON'
+        return (self.ctlr.interact('KEYPROTECT?')) == 'ON'
 
     def read_type(self):
         '''
@@ -309,7 +308,7 @@ class P300(object):
             {"drybulb":string, "wetbulb":string, "controller":string, "tempmax":float}
             "wetbulb" only present if chamber has humidity
         '''
-        rsp = self.ctlr.interact('TYPE?').split(',')
+        rsp = ((self.ctlr.interact('TYPE?'))).split(',')
         if len(rsp) == 4:
             return {
                 'drybulb':rsp[0],
@@ -336,7 +335,7 @@ class P300(object):
                 "OFF""STANDBY" or "CONSTANT" or "RUN" or "RUN PAUSE" or "RUN END HOLD" or
                 "RMT RUN" or "RMT RUN PAUSE" or "RMT RUN END HOLD"
         '''
-        return self.ctlr.interact('MODE?%s' % (',DETAIL' if detail else ''))
+        return (self.ctlr.interact('MODE?{}'.format(',DETAIL' if detail else '')))
 
     def read_mon(self, detail=False):
         '''
@@ -349,7 +348,7 @@ class P300(object):
             "humidity": only present if chamber has humidity
             "mode": see read_mode for valid parameters (with and without detail flag).
         '''
-        rsp = self.ctlr.interact('MON?%s' % (',DETAIL' if detail else '')).split(',')
+        rsp = ((self.ctlr.interact('MON?{}'.format(',DETAIL' if detail else '')))).split(',')
         data = {'temperature':float(rsp[0]), 'mode':rsp[2], 'alarms':int(rsp[3])}
         if rsp[1]:
             data['humidity'] = float(rsp[1])
@@ -367,7 +366,7 @@ class P300(object):
                 "range":{"max":float, "min":float}
             }
         '''
-        rsp = self.ctlr.interact('TEMP?').split(',')
+        rsp = ((self.ctlr.interact('TEMP?'))).split(',')
         return {
             'processvalue':float(rsp[0]),
             'setpoint':float(rsp[1]),
@@ -388,7 +387,7 @@ class P300(object):
                 "range":{"max":float, "min":float}
             }
         '''
-        rsp = self.ctlr.interact('HUMI?').split(',')
+        rsp = ((self.ctlr.interact('HUMI?'))).split(',')
         try:
             hsp = float(rsp[1])
             enable = True
@@ -411,7 +410,8 @@ class P300(object):
             "mode": "off" or "manual" or "auto"
             "setpoint: 20 or 50 or 100 (percent cooling power)
         '''
-        return self.reflookup.get(self.ctlr.interact('SET?'), {'mode':'manual', 'setpoint':0})
+        #return self.reflookup.get(self.ctlr.interact('SET?'), {'mode':'manual', 'setpoint':0})
+        return self.reflookup.get((self.ctlr.interact('SET?')), {'mode':'manual', 'setpoint':0})
 
     def read_ref(self):
         '''
@@ -420,7 +420,7 @@ class P300(object):
         returns:
             [boolean] 0=high stage, 1=low stage
         '''
-        rsp = self.ctlr.interact('REF?').split(',')
+        rsp = ((self.ctlr.interact('REF?'))).split(',')
         if len(rsp) == 3:
             return [rsp[1] == 'ON1', rsp[2] == 'ON2']
         else:
@@ -434,7 +434,7 @@ class P300(object):
         returns:
             [boolean] len=12
         '''
-        rsp = self.ctlr.interact('RELAY?').split(',')
+        rsp = ((self.ctlr.interact('RELAY?'))).split(',')
         return [str(i) in rsp[1:] for i in range(1, 13)]
 
     def read_htr(self):
@@ -445,7 +445,7 @@ class P300(object):
             {"dry":flaot,"wet":float}
             "wet" is only present with humidity chambers
         '''
-        rsp = self.ctlr.interact('%?').split(',')
+        rsp = ((self.ctlr.interact('%?'))).split(',')
         if len(rsp) == 3:
             return {'dry':float(rsp[1]), 'wet':float(rsp[2])}
         else:
@@ -458,7 +458,7 @@ class P300(object):
         returns:
             {"setpoint":float,"enable":True}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,TEMP').split(',')
+        rsp = ((self.ctlr.interact('CONSTANT SET?,TEMP'))).split(',')
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
     def read_constant_humi(self):
@@ -468,7 +468,7 @@ class P300(object):
         returns:
             {"setpoint":float,"enable":boolean}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,HUMI').split(',')
+        rsp = ((self.ctlr.interact('CONSTANT SET?,HUMI'))).split(',')
         return {'setpoint':float(rsp[0]), 'enable':rsp[1] == 'ON'}
 
     def read_constant_ref(self):
@@ -478,7 +478,7 @@ class P300(object):
         returns:
             {"mode":string,"setpoint":float}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,REF')
+        rsp = (self.ctlr.interact('CONSTANT SET?,REF'))
         try:
             return {'mode':'manual', 'setpoint':float(rsp)}
         except Exception:
@@ -491,7 +491,7 @@ class P300(object):
         returns:
             [int]
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,RELAY').split(',')
+        rsp = ((self.ctlr.interact('CONSTANT SET?,RELAY'))).split(',')
         return [str(i) in rsp[1:] for i in range(1, 13)]
 
     def read_constant_ptc(self):
@@ -501,7 +501,7 @@ class P300(object):
         returns:
             {"enable":boolean,"deviation":{"positive":float,"negative":float}}
         '''
-        rsp = self.ctlr.interact('CONSTANT SET?,PTC').split(',')
+        rsp = ((self.ctlr.interact('CONSTANT SET?,PTC'))).split(',')
         return {
             'enable': rsp[0] == 'ON',
             'deviation': {'positive':float(rsp[1]), 'negative':float(rsp[2])}
@@ -523,7 +523,7 @@ class P300(object):
             "humidity" is only present on chambers with humidity
             "counter_?" is the cycles remaining
         '''
-        rsp = self.ctlr.interact('PRGM MON?').split(',')
+        rsp = ((self.ctlr.interact('PRGM MON?'))).split(',')
         if len(rsp) == 6:
             time = rsp[3].split(':')
             return {
@@ -552,7 +552,7 @@ class P300(object):
             {"number":int,"name":string,"end":string}
             "end"="OFF" or "STANDBY" or "CONSTANT" or "HOLD" or "RUN"
         '''
-        rsp = self.ctlr.interact('PRGM SET?')
+        rsp = (self.ctlr.interact('PRGM SET?'))
         parsed = re.search(r'R[AO]M:(\d+),(.+),END\((\w+)\)', rsp)
         return {'number':int(parsed.group(1)), 'name':parsed.group(2), 'end':parsed.group(3)}
 
@@ -563,7 +563,7 @@ class P300(object):
         returns:
             [int]
         '''
-        rsp = self.ctlr.interact('PRGM USE?,RAM').split(',')
+        rsp = ((self.ctlr.interact('PRGM USE?,RAM'))).split(',')
         return [str(i) in rsp[1:] for i in range(1, 41)]
 
     def read_prgm_use_num(self, pgmnum):
@@ -577,8 +577,9 @@ class P300(object):
         '''
         rsp = re.search(
             r'(.+)?,(\d+).(\d+)\/(\d+)',
-            self.ctlr.interact('PRGM USE?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+            (self.ctlr.interact('PRGM USE?,{}:{}'.format(self.rom_pgm(pgmnum), pgmnum)))
         )
+        #   self.ctlr.interact('PRGM USE?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
         return {
             'name':rsp.group(1) if rsp.group(1) else '',
             'date':{
@@ -604,7 +605,8 @@ class P300(object):
             }
             "END"="OFF" or "CONSTANT" or "STANDBY" or "RUN"
         '''
-        pdata = self.ctlr.interact('PRGM DATA?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+        #pdata = self.ctlr.interact('PRGM DATA?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+        pdata = (self.ctlr.interact('PRGM DATA?,{}:{}'.format(self.rom_pgm(pgmnum), pgmnum)))
         return self.parse_prgm_data(pdata)
 
     def read_prgm_data_detail(self, pgmnum):
@@ -619,7 +621,8 @@ class P300(object):
                 "humidity":{"range":{"max":float,"min":float},"mode":string,"setpoint":float}
             }
         '''
-        pdata = self.ctlr.interact('PRGM DATA?,%s:%d,DETAIL'%(self.rom_pgm(pgmnum), pgmnum))
+        # pdata = self.ctlr.interact('PRGM DATA?,%s:%d,DETAIL'%(self.rom_pgm(pgmnum), pgmnum))
+        pdata = (self.ctlr.interact('PRGM DATA?,{}:{},DETAIL'.format(self.rom_pgm(pgmnum), pgmnum)))
         return self.parse_prgm_data_detail(pdata)
 
     def read_prgm_data_step(self, pgmnum, pgmstep):
@@ -641,7 +644,8 @@ class P300(object):
                 "relay":[int]
             }
         '''
-        tmp = self.ctlr.interact('PRGM DATA?,%s:%d,STEP%d'%(self.rom_pgm(pgmnum), pgmnum, pgmstep))
+        #tmp = self.ctlr.interact('PRGM DATA?,%s:%d,STEP%d'%(self.rom_pgm(pgmnum), pgmnum, pgmstep))
+        tmp = (self.ctlr.interact('PRGM DATA?,{}:{},STEP{}'.format(self.rom_pgm(pgmnum), pgmnum, pgmstep)))
         return self.parse_prgm_data_step(tmp)
 
     def read_system_set(self, arg='PTCOPT'):
@@ -654,7 +658,7 @@ class P300(object):
             string
         '''
         if arg in ['PTCOPT', 'PTC', 'PTC']:
-            return self.ctlr.interact('SYSTEM SET?,%s'%arg)
+            return (self.ctlr.interact('SYSTEM SET?,{}'.format(arg)))
         else:
             raise ValueError('arg must be one of the following: "PTCOPT","PTC","PTS"')
 
@@ -671,7 +675,7 @@ class P300(object):
             }
             "humidity" is present only on humidity chambers
         '''
-        rsp = self.ctlr.interact('MON PTC?').split(',')
+        rsp = ((self.ctlr.interact('MON PTC?'))).split(',')
         if len(rsp) == 5:
             return {
                 'temperature':{'product':float(rsp[0]), 'air':float(rsp[1])},
@@ -699,7 +703,7 @@ class P300(object):
                 "setpoint":{"air":float, "product":float}
             }
         '''
-        rsp = self.ctlr.interact('TEMP PTC?').split(',')
+        rsp = ((self.ctlr.interact('TEMP PTC?'))).split(',')
         return {
             'enable':True,
             'enable_cascade':rsp[0] == 'ON',
@@ -715,7 +719,7 @@ class P300(object):
         returns:
             {"enable_cascade":boolean,"deviation":{"positive":float,"negative":float}}
         '''
-        rsp = self.ctlr.interact('SET PTC?').split(',')
+        rsp = ((self.ctlr.interact('SET PTC?'))).split(',')
         return {
             'enable_cascade':rsp[0] == 'ON',
             'deviation':{'positive':tryfloat(rsp[1], 0), 'negative':tryfloat(rsp[2], 0)}
@@ -735,7 +739,7 @@ class P300(object):
                 "opt2":0.0
             }
         '''
-        rsp = self.ctlr.interact('PTC?').split(',')
+        rsp = ((self.ctlr.interact('PTC?'))).split(',')
         return {
             'range':{'max':float(rsp[0]), 'min':float(rsp[1])},
             'p':float(rsp[2]),
@@ -761,7 +765,8 @@ class P300(object):
             }
             "END"="OFF" or "CONSTANT" or "STANDBY" or "RUN"
         '''
-        pdata = self.ctlr.interact('PRGM DATA PTC?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+        #pdata = self.ctlr.interact('PRGM DATA PTC?,%s:%d' % (self.rom_pgm(pgmnum), pgmnum))
+        pdata = (self.ctlr.interact('PRGM DATA PTC?,{}:{}'.format(self.rom_pgm(pgmnum), pgmnum)))
         return self.parse_prgm_data(pdata)
 
     def read_prgm_data_ptc_detail(self, pgmnum):
@@ -776,7 +781,7 @@ class P300(object):
                 "humidity":{"range":{"max":float, "min":float}, "mode":string, "setpoint":float}
             }
         '''
-        tmp = self.ctlr.interact('PRGM DATA PTC?,%s:%d,DETAIL' % (self.rom_pgm(pgmnum), pgmnum))
+        tmp = (self.ctlr.interact('PRGM DATA PTC?,{}:{},DETAIL'.format(self.rom_pgm(pgmnum), pgmnum)))
         return self.parse_prgm_data_detail(tmp)
 
     def read_prgm_data_ptc_step(self, pgmnum, pgmstep):
@@ -807,8 +812,8 @@ class P300(object):
                 "relay":[int]
             }
         '''
-        tmp = self.ctlr.interact('PRGM DATA PTC?,%s:%d,STEP%d' % (self.rom_pgm(pgmnum),
-                                                                  pgmnum, pgmstep))
+        tmp = (self.ctlr.interact('PRGM DATA PTC?,{}:{},STEP{}'.format(self.rom_pgm(pgmnum),pgmnum, pgmstep)))
+        #tmp = self.ctlr.interact('PRGM DATA PTC?,%s:%d,STEP%d' % (self.rom_pgm(pgmnum),pgmnum, pgmstep))
         return self.parse_prgm_data_step(tmp)
 
     def read_run_prgm_mon(self):
@@ -825,7 +830,7 @@ class P300(object):
             }
             "humidity" is present only on humidity chambers
         '''
-        rsp = self.ctlr.interact('RUN PRGM MON?').split(',')
+        rsp = ((self.ctlr.interact('RUN PRGM MON?'))).split(',')
         if len(rsp) == 5:
             time = rsp[3].split(':')
             return {
@@ -845,6 +850,7 @@ class P300(object):
             }
 
     #not tested
+    #no return statement to confirm response from P300 controller (10/2020, python 3) 
     def read_run_prgm(self):
         '''
         get the settings for the remote program being run
@@ -855,7 +861,7 @@ class P300(object):
                 "time":{"hours":int,"minutes":int},"refrig":{"mode":string,"setpoint":}
             }
         '''
-        rsp = self.ctlr.interact('RUN PRGM?')
+        rsp = (self.ctlr.interact('RUN PRGM?'))
         parsed = re.search(
             r'TEMP([0-9.-]+) GOTEMP([0-9.-]+)(?: HUMI(\d+) GOHUMI(\d+))? TIME(\d+):(\d+) (\w+)'
             r'(?: RELAYON,([0-9,]+))?',
@@ -878,7 +884,7 @@ class P300(object):
         '''
         Read the configured IP address of the controller
         '''
-        return dict(zip(['address', 'mask', 'gateway'], self.ctlr.interact('IPSET?').split(',')))
+        return dict(list(zip(['address', 'mask', 'gateway'], ((self.ctlr.interact('IPSET?'))).split(','))))
 
     #--- write methods --- write methods --- write methods --- write methods --- write methods ---
     def write_date(self, year, month, day, dow):
@@ -891,7 +897,8 @@ class P300(object):
             day: int,1-31
         '''
         cyear = (year - 2000) if year > 2000 else year
-        self.ctlr.interact('DATE,%d.%d/%d. %s' % (cyear, month, day, dow))
+        #self.ctlr.interact('DATE,%d.%d/%d. %s' % (cyear, month, day, dow))
+        (self.ctlr.interact('DATE,{}.{}/{}. {}'.format(cyear, month, day, dow)))
 
     def write_time(self, hour, minute, second):
         '''
@@ -902,7 +909,8 @@ class P300(object):
             minute: int,0-59
             second: int,0-59
         '''
-        self.ctlr.interact('TIME,%d:%d:%d' %(hour, minute, second))
+        #self.ctlr.interact('TIME,%d:%d:%d' %(hour, minute, second))
+        (self.ctlr.interact('TIME,{}:{}:{}'.format(hour, minute, second))) 
 
     def write_mask(self, alarm=False, single_step_done=False, state_change=False, gpib=False):
         '''
@@ -911,17 +919,18 @@ class P300(object):
         Args:
             alarm,single_step_done,state_change,GPIB: boolean
         '''
-        self.ctlr.interact('MASK,0%d%d%d00%d0' % (
-            int(alarm),
-            int(single_step_done),
-            int(state_change),
-            int(gpib)))
+        #self.ctlr.interact('MASK,0%d%d%d00%d0' % (
+        #    int(alarm),
+        #    int(single_step_done),
+        #    int(state_change),
+        #    int(gpib)))
+        (self.ctlr.interact('MASK,0{}{}{}00{}0'.format(int(alarm),int(single_step_done),int(state_change),int(gpib)))) 
 
     def write_srq(self):
         '''
         reset the srq register
         '''
-        self.ctlr.interact('SRQ,RESET')
+        (self.ctlr.interact('SRQ,RESET'))
 
     def write_timer_quick(self, mode, time, pgmnum=None, pgmstep=None):
         '''
@@ -933,10 +942,12 @@ class P300(object):
             pgmnum: int, program to run if mode=="RUN"
             pgmstep: int, program step to run if mode=="RUN"
         '''
-        cmd = 'TIMER WRITE,NO0,%d:%d,%s' % (time['hour'], time['minute'], mode)
+        #cmd = 'TIMER WRITE,NO0,%d:%d,%s' % (time['hour'], time['minute'], mode)
+        cmd = 'TIMER WRITE,NO0,{}:{},{}'.format(time['hour'], time['minute'], mode)
         if mode == 'RUN':
-            cmd = '%s,%s:%d,STEP%d' % (cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
-        self.ctlr.interact(cmd)
+            cmd = '{},{}:{},STEP{d}'.format(cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
+            #cmd = '%s,%s:%d,STEP%d' % (cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
+        (self.ctlr.interact(cmd)) 
 
     def write_timer_start(self, repeat, time, mode, **kwargs):
         '''
@@ -953,15 +964,20 @@ class P300(object):
         '''
         date, days, pgmnum = kwargs.get('date'), kwargs.get('days'), kwargs.get('pgmnum')
         pgmstep = kwargs.get('pgmstep')
-        cmd = 'TIMER WRITE,NO1,MODE%d' % {'once':1, 'weekly':2, 'daily':3}[repeat]
+        cmd = 'TIMER WRITE,NO1,MODE{}'.format({'once':1, 'weekly':2, 'daily':3}[repeat])
+        #cmd = 'TIMER WRITE,NO1,MODE%d' % {'once':1, 'weekly':2, 'daily':3}[repeat]
         if repeat == 'once':
-            cmd = '%s,%d.%d/%d' % (cmd, date['year']-2000, date['month'], date['day'])
+            cmd = '{},{}.{}/{}'.format(cmd, date['year']-2000, date['month'], date['day'])
+            #cmd = '%s,%d.%d/%d' % (cmd, date['year']-2000, date['month'], date['day'])
         elif repeat == 'weekly':
-            cmd = '%s,%s' % (cmd, '/'.join(days))
-        cmd = '%s,%d:%d,%s' % (cmd, time['hour'], time['minute'], mode)
+            cmd = '{},{}'.format(cmd, '/'.join(days))
+            #cmd = '%s,%s' % (cmd, '/'.join(days))
+        cmd = '{},{}:{},{}'.format(cmd, time['hour'], time['minute'], mode)
+        #cmd = '%s,%d:%d,%s' % (cmd, time['hour'], time['minute'], mode)
         if mode == 'RUN':
-            cmd = '%s,%s:%d,STEP%d' % (cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
-        self.ctlr.interact(cmd)
+            cmd = '{},{}:{},STEP{}'.format(cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
+            #cmd = '%s,%s:%d,STEP%d' % (cmd, self.rom_pgm(pgmnum), pgmnum, pgmstep)
+        (self.ctlr.interact(cmd))
 
     def write_timer_stop(self, repeat, time, mode, date=None, days=None):
         '''
@@ -974,13 +990,17 @@ class P300(object):
             date: {"month":int,"day":int,"year":int}, date to start chamber on when repeat=="once"
             days: [string], the day to start the chamber on when repeat=="weekly" i.e. "WED"
         '''
-        cmd = 'TIMER WRITE,NO2,MODE%d' % {'once':1, 'weekly':2, 'daily':3}[repeat]
+        cmd = 'TIMER WRITE,NO2,MODE{}'.format({'once':1, 'weekly':2, 'daily':3}[repeat])
+        #cmd = 'TIMER WRITE,NO2,MODE%d' % {'once':1, 'weekly':2, 'daily':3}[repeat]
         if repeat == 'once':
-            cmd = '%s,%d.%d/%d' % (cmd, date['year']-2000, date['month'], date['day'])
+            cmd = '{},{}.{}/{}'.format(cmd, date['year']-2000, date['month'], date['day'])
+            #cmd = '%s,%d.%d/%d' % (cmd, date['year']-2000, date['month'], date['day'])
         elif repeat == 'weekly':
-            cmd = '%s,%s' % (cmd, '/'.join(days))
-        cmd = '%s,%d:%d,%s' % (cmd, time['hour'], time['minute'], mode)
-        self.ctlr.interact(cmd)
+            #cmd = '%s,%s' % (cmd, '/'.join(days))
+        #cmd = '%s,%d:%d,%s' % (cmd, time['hour'], time['minute'], mode)
+            cmd = '{},{}'.format(cmd, '/'.join(days))
+        cmd = '{},{}:{},{}'.format(cmd, time['hour'], time['minute'], mode)
+        (self.ctlr.interact(cmd))
 
     def write_timer_erase(self, timer):
         '''
@@ -989,7 +1009,8 @@ class P300(object):
         Args:
             timer: string, "quick" or "start" or "stop"
         '''
-        self.ctlr.interact('TIMER ERASE,NO%d' % ({'quick':0, 'start':1, 'stop':2}[timer]))
+        #self.ctlr.interact('TIMER ERASE,NO%d' % ({'quick':0, 'start':1, 'stop':2}[timer]))
+        (self.ctlr.interact('TIMER ERASE,NO{}'.format({'quick':0, 'start':1, 'stop':2}[timer]))) 
 
     def write_timer(self, timer, run):
         '''
@@ -1000,7 +1021,8 @@ class P300(object):
             run: boolean, True=turn timer on, False=turn timer off
         '''
         tmp = {'quick':0, 'start':1, 'stop':2}
-        self.ctlr.interact('TIMER,%s,%d' % ('ON' if run else 'OFF', tmp[timer]))
+        (self.ctlr.interact('TIMER,{},{}'.format('ON' if run else 'OFF', tmp[timer])))
+        #self.ctlr.interact('TIMER,%s,%d' % ('ON' if run else 'OFF', tmp[timer]))
 
     def write_keyprotect(self, enable):
         '''
@@ -1009,7 +1031,8 @@ class P300(object):
         Args:
             enable: boolean True=protection on, False=protection off
         '''
-        self.ctlr.interact('KEYPROTECT,%s' % ('ON' if enable else 'off'))
+        #self.ctlr.interact('KEYPROTECT,%s' % ('ON' if enable else 'off'))
+        (self.ctlr.interact('KEYPROTECT,{}'.format('ON' if enable else 'off')))
 
     def write_power(self, start):
         '''
@@ -1018,7 +1041,8 @@ class P300(object):
         Args:
             start: boolean True=start constant1, False=Turn contoller off)
         '''
-        self.ctlr.interact('POWER,%s' % ('ON' if start else 'off'))
+        (self.ctlr.interact('POWER,{}'.format('ON' if start else 'off')))
+        #self.ctlr.interact('POWER,%s' % ('ON' if start else 'off'))
 
     def write_temp(self, **kwargs):
         '''
@@ -1030,16 +1054,18 @@ class P300(object):
             min: float
             range: {"max":float, "min":float}
         '''
+        setpoint, maximum, minimum = 24,30,10
         setpoint, maximum, minimum = kwargs.get('setpoint'), kwargs.get('max'), kwargs.get('min')
         if setpoint is not None and minimum is not None and maximum is not None:
-            self.ctlr.interact('TEMP, S%0.1f H%0.1f L%0.1f' % (setpoint, maximum, minimum))
+            (self.ctlr.interact('TEMP, S{0:.1f} H{0:.1f} L{0:.1f}'.format(setpoint, maximum, minimum)))
+            #self.ctlr.interact('TEMP, S%0.1f H%0.1f L%0.1f' % (setpoint, maximum, minimum))
         else:
             if setpoint is not None:
-                self.ctlr.interact('TEMP, S%0.1f' % setpoint)
+                (self.ctlr.interact('TEMP, S{0:.1f}'.format(setpoint)))
             if minimum is not None:
-                self.ctlr.interact('TEMP, L%0.1f' % minimum)
+                (self.ctlr.interact('TEMP, L{0:.1f}'.format(minimum)))
             if maximum is not None:
-                self.ctlr.interact('TEMP, H%0.1f' % maximum)
+                (self.ctlr.interact('TEMP, H{0:.1f}'.format(maximum)))
 
     def write_humi(self, **kwargs):
         '''
@@ -1057,11 +1083,13 @@ class P300(object):
         if enable is False:
             spstr = 'SOFF'
         elif setpoint is not None:
-            spstr = ' S%0.1f' % setpoint
+            spstr = ' S{0:.1f}'.format(setpoint)
+            #spstr = ' S%0.1f' % setpoint
         else:
             spstr = None
         if spstr is not None and minimum is not None and maximum is not None:
-            self.ctlr.interact('HUMI,%s H%0.1f L%0.1f' % (spstr, maximum, minimum))
+            #self.ctlr.interact('HUMI,%s H%0.1f L%0.1f' % (spstr, maximum, minimum))
+            (self.ctlr.interact('HUMI,{} H{0:.1f} {0:.1f}'.format(spstr, maximum, minimum)))
         else:
             if spstr is not None:
                 self.ctlr.interact('HUMI,' + spstr)
@@ -1078,7 +1106,7 @@ class P300(object):
             mode: string,"off" or "manual" or "auto"
             setpoint: int,20 or 50 or 100
         '''
-        self.ctlr.interact('SET,%s' % self.encode_refrig(mode, setpoint))
+        (self.ctlr.interact('SET,{}'.format(self.encode_refrig(mode, setpoint))))
 
     def write_relay(self, relays):
         '''
@@ -1087,11 +1115,11 @@ class P300(object):
         Args:
             relays: [boolean] True=turn relay on, False=turn relay off, None=do nothing
         '''
-        vals = self.parse_relays(relays)
+        vals = (self.parse_relays(relays)).decode('utr-8', 'replace')
         if len(vals['on']) > 0:
-            self.ctlr.interact('RELAY,ON,%s' % ','.join(str(v) for v in vals['on']))
+            (self.ctlr.interact('RELAY,ON,{}'.format(','.join(str(v) for v in vals['on']))))
         if len(vals['off']) > 0:
-            self.ctlr.interact('RELAY,OFF,%s' % ','.join(str(v) for v in vals['off']))
+            (self.ctlr.interact('RELAY,OFF,{}'.format(','.join(str(v) for v in vals['off'])))) 
 
     def write_prgm_run(self, pgmnum, pgmstep):
         '''
@@ -1101,25 +1129,26 @@ class P300(object):
             pgmnum: int, program to run
             prgmstep: int, step to run
         '''
-        self.ctlr.interact('PRGM,RUN,%s:%d,STEP%d' % (self.rom_pgm(pgmnum), pgmnum, pgmstep))
+        #self.ctlr.interact('PRGM,RUN,%s:%d,STEP%d' % (self.rom_pgm(pgmnum), pgmnum, pgmstep))
+        (self.ctlr.interact('PRGM,RUN,{}:{},STEP{}'.format(self.rom_pgm(pgmnum), pgmnum, pgmstep)))
 
     def write_prgm_pause(self):
         '''
         pause a running program.
         '''
-        self.ctlr.interact('PRGM,PAUSE')
+        (self.ctlr.interact('PRGM,PAUSE')) 
 
     def write_prgm_continue(self):
         '''
         resume execution of a paused program
         '''
-        self.ctlr.interact('PRGM,CONTINUE')
+        (self.ctlr.interact('PRGM,CONTINUE'))
 
     def write_prgm_advance(self):
         '''
         skip to the next step of a running program
         '''
-        self.ctlr.interact('PRGM,ADVANCE')
+        (self.ctlr.interact('PRGM,ADVANCE'))
 
     def write_prgm_end(self, mode="STANDBY"):
         '''
@@ -1129,7 +1158,7 @@ class P300(object):
             mode: string, vaid options: "HOLD"/"CONST"/"OFF"/"STANDBY"(default)
         '''
         if mode in ["HOLD", "CONST", "OFF", "STANDBY"]:
-            self.ctlr.interact('PRGM,END,%s' % mode)
+            (self.ctlr.interact('PRGM,END,{}'.format(mode))) 
         else:
             raise ValueError('"mode" must be "HOLD"/"CONST"/"OFF"/"STANDBY"')
 
@@ -1137,19 +1166,19 @@ class P300(object):
         '''
         turn the controller screen off
         '''
-        self.ctlr.interact('MODE,OFF')
+        (self.ctlr.interact('MODE,OFF'))
 
     def write_mode_standby(self):
         '''
         stop operation(STANDBY)
         '''
-        self.ctlr.interact('MODE,STANDBY')
+        (self.ctlr.interact('MODE,STANDBY'))
 
     def write_mode_constant(self):
         '''
         run constant setpoint 1
         '''
-        self.ctlr.interact('MODE,CONSTANT')
+        (self.ctlr.interact('MODE,CONSTANT'))
 
     def write_mode_run(self, pgmnum):
         '''
@@ -1158,7 +1187,7 @@ class P300(object):
         Args:
             pgmnum: int, the program to run
         '''
-        self.ctlr.interact('MODE,RUN%d' % pgmnum)
+        (self.ctlr.interact('MODE,RUN{}'.format(pgmnum)))
 
     def write_prgm_data_edit(self, pgmnum, mode, overwrite=False):
         '''
@@ -1169,8 +1198,9 @@ class P300(object):
             mode: string, "START" or "END" or "CANCEL"
             overwrite: boolean, when true programs/steps may be overwritten
         '''
-        tmp = 'PRGM DATA WRITE,PGM%d,%s %s'%(pgmnum, 'OVER WRITE' if overwrite else 'EDIT', mode)
-        self.ctlr.interact(tmp)
+        #tmp = 'PRGM DATA WRITE,PGM%d,%s %s'%(pgmnum, 'OVER WRITE' if overwrite else 'EDIT', mode)
+        tmp = 'PRGM DATA WRITE,PGM{},{} {}'.format(pgmnum, 'OVER WRITE' if overwrite else 'EDIT', mode)
+        (self.ctlr.interact(tmp))
 
     def write_prgm_data_details(self, pgmnum, **pgmdetail):
         '''
@@ -1183,48 +1213,52 @@ class P300(object):
         if 'counter_a' in pgmdetail and pgmdetail['counter_a']['cycles'] > 0:
             ttp = (pgmnum, pgmdetail['counter_a']['start'], pgmdetail['counter_a']['end'],
                    pgmdetail['counter_a']['cycles'])
-            tmp = 'PRGM DATA WRITE,PGM%d,COUNT,A(%d.%d.%d)' % ttp
+            tmp = 'PRGM DATA WRITE,PGM%d,COUNT,A({}.{}.{})'.format(ttp)
+            #tmp = 'PRGM DATA WRITE,PGM%d,COUNT,A(%d.%d.%d)' % ttp
             if 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
                 ttp = (tmp, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
                        pgmdetail['counter_b']['cycles'])
-                tmp = '%s,B(%d.%d.%d)' % ttp
-            self.ctlr.interact(tmp)
+                tmp = '{},B({}.{}.{})'.format(ttp)
+                #tmp = '%s,B(%d.%d.%d)' % ttp
+            (self.ctlr.interact(tmp)) 
         elif 'counter_b' in pgmdetail and pgmdetail['counter_b']['cycles'] > 0:
             ttp = (pgmnum, pgmdetail['counter_b']['start'], pgmdetail['counter_b']['end'],
                    pgmdetail['counter_b']['cycles'])
-            self.ctlr.interact('PRGM DATA WRITE,PGM%d,COUNT,B(%d.%d.%d)' % ttp)
+            #self.ctlr.interact('PRGM DATA WRITE,PGM%d,COUNT,B(%d.%d.%d)' % ttp)
+            (self.ctlr.interact('PRGM DATA WRITE,PGM{},COUNT,B({}.{}.{})'.format(ttp))) 
         if 'name' in pgmdetail:
-            self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name']))
+            #self.ctlr.interact('PRGM DATA WRITE,PGM%d,NAME,%s' % (pgmnum, pgmdetail['name']))
+            (self.ctlr.interact('PRGM DATA WRITE,PGM{},NAME,{}'.format(pgmnum, pgmdetail['name']))) 
         if 'end' in pgmdetail:
             if pgmdetail['end'] != 'RUN':
                 ttp = (pgmnum, pgmdetail['end'])
             else:
-                ttp = (pgmnum, 'RUN,PTN%s'%pgmdetail['next_prgm'])
-            self.ctlr.interact('PRGM DATA WRITE,PGM%d,END,%s' % ttp)
+                ttp = (pgmnum, 'RUN,PTN{}'.format(pgmdetail['next_prgm']))
+            (self.ctlr.interact('PRGM DATA WRITE,PGM{},END,{}'.format(ttp))) 
         if 'tempDetail' in pgmdetail:
             if 'range' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['max'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,HTEMP,%0.1f' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},HTEMP,{0:.1f}'.format(ttp))) 
                 ttp = (pgmnum, pgmdetail['tempDetail']['range']['min'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,LTEMP,%0.1f' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},LTEMP,{0:.1f}'.format(ttp))) 
             if 'mode' in pgmdetail['tempDetail']:
                 ttp = (pgmnum, pgmdetail['tempDetail']['mode'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE MODE,TEMP,%s' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},PRE MODE,TEMP,{}'.format(ttp))) 
             if 'setpoint' in pgmdetail['tempDetail'] and pgmdetail['tempDetail']['mode'] == 'SV':
                 ttp = (pgmnum, pgmdetail['tempDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE TSV,%0.1f' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},PRE TSV,{0:.1f}'.format(ttp))) 
         if 'humiDetail' in pgmdetail:
             if 'range' in pgmdetail['humiDetail']:
                 ttp = (pgmnum, pgmdetail['humiDetail']['range']['max'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,HHUMI,%0.0f' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},HHUMI,{0:.0f}'.format(ttp))) 
                 ttp = (pgmnum, pgmdetail['humiDetail']['range']['min'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,LHUMI,%0.0f' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},LHUMI,{0:.0f}'.format(ttp))) 
             if 'mode' in pgmdetail['humiDetail']:
                 ttp = (pgmnum, pgmdetail['humiDetail']['mode'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE MODE,HUMI,%s' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},PRE MODE,HUMI,{}'.format(ttp))) 
             if 'setpoint' in pgmdetail['humiDetail'] and pgmdetail['humiDetail']['mode'] == 'SV':
                 ttp = (pgmnum, pgmdetail['humiDetail']['setpoint'])
-                self.ctlr.interact('PRGM DATA WRITE,PGM%d,PRE HSV,%0.0f' % ttp)
+                (self.ctlr.interact('PRGM DATA WRITE,PGM{},PRE HSV,{0:.0f}'.format(ttp))) 
 
     def write_prgm_data_step(self, pgmnum, **pgmstep):
         '''
@@ -1234,42 +1268,56 @@ class P300(object):
             pgmnum: int, the program being written/edited
             pgmstep: the program parameters, see read_prgm_data_step for parameters
         '''
-        cmd = 'PRGM DATA WRITE,PGM%d,STEP%d' % (pgmnum, pgmstep['number'])
+        #cmd = 'PRGM DATA WRITE,PGM%d,STEP%d' % (pgmnum, pgmstep['number'])
+        cmd = 'PRGM DATA WRITE,PGM{},STEP{}'.format(pgmnum, pgmstep['number'])
         if 'temperature' in pgmstep:
             if 'setpoint' in pgmstep['temperature']:
-                cmd = '%s,TEMP%0.1f' % (cmd, pgmstep['temperature']['setpoint'])
+                #cmd = '%s,TEMP%0.1f' % (cmd, pgmstep['temperature']['setpoint'])
+                cmd = '{},TEMP{0:.1f}'.format(cmd, pgmstep['temperature']['setpoint'])
             if 'ramp' in pgmstep['temperature']:
-                cmd = '%s,TRAMP%s' % (cmd, 'ON' if pgmstep['temperature']['ramp'] else 'OFF')
+                #cmd = '%s,TRAMP%s' % (cmd, 'ON' if pgmstep['temperature']['ramp'] else 'OFF')
+                cmd = '{},TRAMP{}'.format(cmd, 'ON' if pgmstep['temperature']['ramp'] else 'OFF')
             if 'enable_cascade' in pgmstep['temperature']:
-                cmd = '%s,PTC%s'%(cmd, 'ON' if pgmstep['temperature']['enable_cascade'] else 'OFF')
+                #cmd = '%s,PTC%s'%(cmd, 'ON' if pgmstep['temperature']['enable_cascade'] else 'OFF')
+                cmd = '{},PTC{}'.format(cmd, 'ON' if pgmstep['temperature']['enable_cascade'] else 'OFF')
             if 'deviation' in pgmstep['temperature']:
                 ttp = (cmd, pgmstep['temperature']['deviation']['positive'],
                        pgmstep['temperature']['deviation']['negative'])
-                cmd = '%s,DEVP%0.1f,DEVN%0.1f' % ttp
+                #cmd = '%s,DEVP%0.1f,DEVN%0.1f' % ttp
+                cmd = '{},DEVP{0:.1f},DEVN{0:.1f}'.format(ttp)
         if 'humidity' in pgmstep:
             if 'setpoint' in pgmstep['humidity']:
                 if pgmstep['humidity']['enable']:
-                    htmp = '%0.0f' % pgmstep['humidity']['setpoint']
+                    #htmp = '%0.0f' % pgmstep['humidity']['setpoint']
+                    htmp = '{0:.0f}'.format(pgmstep['humidity']['setpoint'])
                 else:
                     htmp = 'OFF'
-                cmd = '%s,HUMI%s' % (cmd, htmp)
+                #cmd = '%s,HUMI%s' % (cmd, htmp)
+                cmd = '{},HUMI{}'.format(cmd, htmp)
             if 'ramp' in pgmstep['humidity'] and pgmstep['humidity']['enable']:
-                cmd = '%s,HRAMP%s' % (cmd, 'ON' if pgmstep['humidity']['ramp'] else 'OFF')
+                #cmd = '%s,HRAMP%s' % (cmd, 'ON' if pgmstep['humidity']['ramp'] else 'OFF')
+                cmd = '{},HRAMP{}'.format(cmd, 'ON' if pgmstep['humidity']['ramp'] else 'OFF')
         if 'time' in pgmstep:
-            cmd = '%s,TIME%d:%d' % (cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
+            #cmd = '%s,TIME%d:%d' % (cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
+            cmd = '{},TIME{}:{}'.format(cmd, pgmstep['time']['hour'], pgmstep['time']['minute'])
         if 'granty' in pgmstep:
-            cmd = '%s,GRANTY %s' % (cmd, 'ON' if pgmstep['granty'] else 'OFF')
+            #cmd = '%s,GRANTY %s' % (cmd, 'ON' if pgmstep['granty'] else 'OFF')
+            cmd = '{},GRANTY {}'.format(cmd, 'ON' if pgmstep['granty'] else 'OFF')
         if 'paused' in pgmstep:
-            cmd = '%s,PAUSE %s' % (cmd, 'ON' if pgmstep['paused'] else 'OFF')
+            #cmd = '%s,PAUSE %s' % (cmd, 'ON' if pgmstep['paused'] else 'OFF')
+            cmd = '{},PAUSE {}'.format(cmd, 'ON' if pgmstep['paused'] else 'OFF')
         if 'refrig' in pgmstep:
-            cmd = '%s,%s' % (cmd, self.encode_refrig(**pgmstep['refrig']))
+            #cmd = '%s,%s' % (cmd, self.encode_refrig(**pgmstep['refrig']))
+            cmd = '{},{}'.format(cmd, self.encode_refrig(**pgmstep['refrig']))
         if 'relay' in pgmstep:
             rlys = self.parse_relays(pgmstep['relay'])
             if rlys['on']:
-                cmd = '%s,RELAY ON%s' % (cmd, '.'.join(str(v) for v in rlys['on']))
+                #cmd = '%s,RELAY ON%s' % (cmd, '.'.join(str(v) for v in rlys['on']))
+                cmd = '{},RELAY ON{}'.format(cmd, '.'.join(str(v) for v in rlys['on']))
             if rlys['off']:
-                cmd = '%s,RELAY OFF%s' % (cmd, '.'.join(str(v) for v in rlys['off']))
-        self.ctlr.interact(cmd)
+                #cmd = '%s,RELAY OFF%s' % (cmd, '.'.join(str(v) for v in rlys['off']))
+                cmd = '{},RELAY OFF{}'.format(cmd, '.'.join(str(v) for v in rlys['off']))
+        (self.ctlr.interact(cmd)) 
 
     def write_prgm_erase(self, pgmnum):
         '''
@@ -1278,7 +1326,8 @@ class P300(object):
         Args:
             pgmnum: int, the program to erase
         '''
-        self.ctlr.interact('PRGM ERASE,%s:%d'%(self.rom_pgm(pgmnum), pgmnum))
+        #self.ctlr.interact('PRGM ERASE,%s:%d'%(self.rom_pgm(pgmnum), pgmnum))
+        (self.ctlr.interact('PRGM ERASE,{}:{}'.format(self.rom_pgm(pgmnum), pgmnum))) 
 
     def write_run_prgm(self, temp, hour, minute, gotemp=None, humi=None, gohumi=None, relays=None):
         '''
@@ -1293,19 +1342,25 @@ class P300(object):
             gohumi: float, the humidity to end the steap at (optional for ramping)
             relays: [boolean], True= turn relay on, False=turn relay off, None=Do nothing
         '''
-        cmd = 'RUN PRGM, TEMP%0.1f TIME%d:%d' % (temp, hour, minute)
+        #cmd = 'RUN PRGM, TEMP%0.1f TIME%d:%d' % (temp, hour, minute)
+        cmd = 'RUN PRGM, TEMP{0:.1f} TIME{}:{}'.format(temp, hour, minute)
         if gotemp is not None:
-            cmd = '%s GOTEMP%0.1f' % (cmd, gotemp)
+            #cmd = '%s GOTEMP%0.1f' % (cmd, gotemp)
+            cmd = '{} GOTEMP{0:.1f}'.format(cmd, gotemp)
         if humi is not None:
-            cmd = '%s HUMI%0.0f' % (cmd, humi)
+            #cmd = '%s HUMI%0.0f' % (cmd, humi)
+            cmd = '{} HUMI{0:.0f}'.format(cmd, humi)
         if gohumi is not None:
-            cmd = '%s GOHUMI%0.0f' % (cmd, gohumi)
+            #cmd = '%s GOHUMI%0.0f' % (cmd, gohumi)
+            cmd = '{} GOHUMI{0:.0f}'.format(cmd, gohumi)
         rlys = self.parse_relays(relays) if relays is not None else {'on':None, 'off':None}
         if rlys['on']:
-            cmd = '%s RELAYON,%s' % (cmd, ','.join(str(v) for v in rlys['on']))
+            #cmd = '%s RELAYON,%s' % (cmd, ','.join(str(v) for v in rlys['on']))
+            cmd = '{} RELAYON,{}'.format(cmd, ','.join(str(v) for v in rlys['on']))
         if rlys['off']:
-            cmd = '%s RELAYOFF,%s' % (cmd, ','.join(str(v) for v in rlys['off']))
-        self.ctlr.interact(cmd)
+            #cmd = '%s RELAYOFF,%s' % (cmd, ','.join(str(v) for v in rlys['off']))
+            cmd = '{} RELAYOFF,{}'.format(cmd, ','.join(str(v) for v in rlys['off']))
+        (self.ctlr.interact(cmd)) 
 
     def write_temp_ptc(self, enable, positive, negative):
         '''
@@ -1317,7 +1372,8 @@ class P300(object):
             negative: float, maximum negative deviation
         '''
         ttp = ('ON' if enable else 'OFF', positive, negative)
-        self.ctlr.interact('TEMP PTC, PTC%s, DEVP%0.1f, DEVN%0.1f' % ttp)
+        #self.ctlr.interact('TEMP PTC, PTC%s, DEVP%0.1f, DEVN%0.1f' % ttp)
+        (self.ctlr.interact('TEMP PTC, PTC{}, DEVP{0:.1f}, DEVN{0:.1f}'.format(ttp))) 
 
     def write_ptc(self, op_range, pid_p, pid_filter, pid_i, **kwargs):
         '''
@@ -1332,13 +1388,15 @@ class P300(object):
         '''
         opt1, opt2 = kwargs.get('opt1', 0), kwargs.get('opt2', 0)
         ttp = (op_range['max'], op_range['min'], pid_p, pid_filter, pid_i, opt1, opt2)
-        self.ctlr.interact('PTC,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f' % ttp)
+        #self.ctlr.interact('PTC,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f,%0.1f' % ttp)
+        (self.ctlr.interact('PTC,{0:.1f},{0:.1f},{0:.1f},{0:.1f},{0:.1f},{0:.1f},{0:.1f}'.format(ttp))) 
 
     def write_ip_set(self, address, mask, gateway):
         '''
         Write the IP address configuration to the controller
         '''
-        self.ctlr.interact('IPSET,%s,%s,%s' % (address, mask, gateway))
+        #self.ctlr.interact('IPSET,%s,%s,%s' % (address, mask, gateway))
+        (self.ctlr.interact('IPSET,{},{},{}'.format(address, mask, gateway))) 
 
     # --- helpers etc --- helpers etc --- helpers etc --- helpers etc -- helpers etc -- helpers etc
     def parse_prgm_data_step(self, arg):
@@ -1394,14 +1452,20 @@ class P300(object):
         )
         ret = {
             'tempDetail':{
-                'range':{'max':float(parsed.group(1)), 'min':float(parsed.group(2))},
+                'range':{
+                    'max':float(parsed.group(1)),
+                    'min':float(parsed.group(2))
+                },
                 'mode':parsed.group(5),
                 'setpoint':parsed.group(6)
             }
         }
         if parsed.group(3):
             ret['humiDetail'] = {
-                'range':{'max':float(parsed.group(3)), 'min':float(parsed.group(4))},
+                'range':{
+                    'max':float(parsed.group(3)),
+                    'min':float(parsed.group(4))
+                },
                 'mode':parsed.group(7),
                 'setpoint':parsed.group(8)
             }
@@ -1440,8 +1504,10 @@ class P300(object):
         '''
         if pgmnum > 0 and pgmnum <= 40:
             pgm = self.read_prgm_data_ptc(pgmnum) if with_ptc else self.read_prgm_data(pgmnum)
+            pgm = self.read_prgm_data_ptc(pgmnum) if with_ptc else self.read_prgm_data(pgmnum)
             if with_ptc:
                 try:
+                    pgm.update(self.read_prgm_data_ptc_detail(pgmnum))
                     pgm.update(self.read_prgm_data_ptc_detail(pgmnum))
                 except NotImplementedError:
                     pass #SCP-220 does not have the detail command

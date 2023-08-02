@@ -7,11 +7,11 @@ Upper level interface for Espec Corp. Controllers (just the P300 for now)
 #pylint: disable=R0902,R0904
 import datetime
 import time
-from controllerinterface import ControllerInterface, exclusive
-from controllerinterface import ControllerInterfaceError
-from p300 import P300
-from scp220 import SCP220
-from especinteract import EspecError
+from chamberconnectlibrary.controllerinterface import ControllerInterface, exclusive
+from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
+from chamberconnectlibrary.p300 import P300
+from chamberconnectlibrary.scp220 import SCP220
+from chamberconnectlibrary.especinteract import EspecError
 
 class Espec(ControllerInterface):
     '''
@@ -23,6 +23,7 @@ class Espec(ControllerInterface):
             "Serial" -- Use a hardware serial port
         adr (int): The address of the controller (default=1)
         host (str): The hostname (IP address) of the controller when interface="TCP"
+        port (int): The port to use when interface="TCP" (default=10001)
         serialport (str): The serial port to use when interface="Serial" (default=3(COM4))
         baudrate (int): The serial port's baud rate to use when interface="Serial" (default=9600)
         loops (int): The number of control loops the controller has (default=1, max=2)
@@ -78,12 +79,12 @@ class Espec(ControllerInterface):
         '''
         connect to the controller using the paramters provided on class initialization
         '''
-        args = {'serialport':self.serialport, 'baudrate':self.baudrate, 'host':self.host,
-                'address':self.adr}
+        keys_to_pass = ['serialport', 'baudrate', 'host', 'port', 'address']
+        kwargs = {k: v for k, v in self.kwargs.items() if k in keys_to_pass}
         if self.ctlr_type == 'P300':
-            self.client = P300(self.interface, **args)
+            self.client = P300(self.interface, **kwargs)
         elif self.ctlr_type == 'SCP220':
-            self.client = SCP220(self.interface, **args)
+            self.client = SCP220(self.interface, **kwargs)
         else:
             raise ValueError('"%s" is not a supported controller type' % self.ctlr_type)
 
@@ -153,11 +154,11 @@ class Espec(ControllerInterface):
         }
         if param_list is None:
             param_list = kwargs
-        if isinstance(identifier, basestring):
+        if isinstance(identifier, str):
             my_loop_map = self.loop_map[self.named_loop_map[identifier]]
             loop_number = my_loop_map['num']
             loop_type = my_loop_map['type']
-        elif isinstance(identifier, (int, long)):
+        elif isinstance(identifier, int):
             loop_number = identifier
         else:
             raise ValueError(
@@ -204,7 +205,7 @@ class Espec(ControllerInterface):
                 params = {param_list.pop('enable_cascade')}
             params.update(param_list.pop('deviation'))
             self.client.write_temp_ptc(**params)
-        for key, val in param_list.items():
+        for key, val in list(param_list.items()):
             params = {'value':val}
             params.update({'exclusive':False, 'N':loop_number})
             try:
@@ -298,9 +299,9 @@ class Espec(ControllerInterface):
     @exclusive
     def get_loop_units(self, N):
         if self.lpd[N] == self.temp:
-            return u'\xb0C'
+            return '\xb0C'
         elif self.lpd[N] == self.humi:
-            return u'%RH'
+            return '%RH'
         else:
             raise ValueError(self.lp_exmsg)
 

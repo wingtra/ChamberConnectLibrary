@@ -3,11 +3,28 @@ Handle the actual communication with Espec Corp. Controllers
 
 :copyright: (C) Espec North America, INC.
 :license: MIT, see LICENSE for more details.
+
+Updated: Oct 2020; 2022
+Modified and updated for Python 3.6+ by Paul Nong-Laolam  <pnong-laolam@espec.com>
+
+Note: The original source code written for Python 2.7.x by Myles Metzler 
+      To set this library available for Python 3, the entire set of source codes
+      have been updated to support Python 3. 
+
+      Some changes were made within the Python 3 itself and this code as updated 
+      to reflect those changes. 
+
+      Code has been completely tested on Python 3.6.8 and Python 3.7.3. 
+
+Updated: July 2022
+        -- bug fixes and modifications to run on Python 3.6.8 and above 
+        -- completely test on Python 3.9+ 
 '''
 #pylint: disable=W0703
 import socket
 import serial
 import time
+from chamberconnectlibrary.controllerinterface import ControllerInterfaceError
 
 ERROR_DESCIPTIONS = {
     'CMD ERR':'Unrocognized command',
@@ -52,7 +69,7 @@ class EspecSerial(object):
     '''
     def __init__(self, **kwargs):
         self.address = kwargs.get('address', None)
-        self.delimeter = kwargs.get('delimeter', '\r\n')
+        self.delimiter = kwargs.get('delimiter', '\r\n')
         self.serial = serial.Serial(
             port=kwargs.get('port'),
             baudrate=kwargs.get('baud', 9600),
@@ -89,24 +106,27 @@ class EspecSerial(object):
             message = [message]
         recvs = []
         for msg in message:
-            msg = msg.encode('ascii', 'ignore')
+            str_cmd1 = (f'{self.address},{msg}{self.delimiter}')
+            str_cmd2 = (f'{msg}{self.delimiter}')
             if self.address:
-                self.serial.write('%d,%s%s'%(self.address, msg, self.delimeter))
+                self.serial.write(str_cmd1.encode('ascii', 'ignore'))
             else:
-                self.serial.write('%s%s' % (msg, self.delimeter))
-            recv = ''
-            while recv[0-len(self.delimeter):] != self.delimeter:
+                self.serial.write(str_cmd2.encode('ascii', 'ignore'))
+            recv = ''.encode('ascii', 'ignore')
+            while recv[0-len(self.delimiter):] != self.delimiter:
                 rbuff = self.serial.read(1)
                 if len(rbuff) == 0:
                     raise EspecError('The chamber did not respond in time')
                 recv += rbuff
             if recv.startswith('NA:'):
-                errmsg = recv[3:0-len(self.delimeter)]
-                msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
-                    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
-                )
+                errmsg = recv[3:0-len(self.delimiter)]
+                descriptErr=ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+                msg = f'EspecError: command:"{message}" generated Error:"{errmsg}"({descriptErr})'
+                #msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
+                #    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+                #)
                 raise EspecError(msg)
-            recvs.append(recv[:-1*len(self.delimeter)])
+            recvs.append(recv[:-1*len(self.delimiter)])
         return recvs if len(recvs) > 1 else recvs[0]
 
 class EspecTCP(object):
@@ -116,9 +136,9 @@ class EspecTCP(object):
     def __init__(self, **kwargs):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setblocking(True)
-        self.socket.connect((kwargs.get('host'), kwargs.get('port', 57732)))
+        self.socket.connect((kwargs.get('host'), kwargs.get('port', 10001)))
         self.address = kwargs.get('address', None)
-        self.delimeter = kwargs.get('delimeter', '\r\n')
+        self.delimiter = kwargs.get('delimiter', '\r\n')
 
     def __del__(self):
         try:
@@ -144,20 +164,17 @@ class EspecTCP(object):
         raises:
             EspecError
         '''
-        message = message.encode('ascii', 'ignore')
-        # TCP forwarder doesnt handle address properly so we are ignoring it.
-        # if self.address:
-        #     self.socket.send('%d,%s%s'%(self.address, message, self.delimeter))
-        # else:
-        #     self.socket.send('%s%s'%(message, self.delimeter))
-        self.socket.send('%s%s'%(message, self.delimeter))
+        str_cmd = (f'{message}{self.delimiter}')
+        self.socket.send(str_cmd.encode('ascii', 'ignore'))
         recv = ''
-        while recv[0-len(self.delimeter):] != self.delimeter:
-            recv += self.socket.recv(1)
+        while recv[0-len(self.delimiter):] != self.delimiter:
+            recv += self.socket.recv(1).decode('utf-8', 'replace')
         if recv.startswith('NA:'):
-            errmsg = recv[3:0-len(self.delimeter)]
-            msg = 'EspecError: command:"%s" genarated Error:"%s"(%s)' % (
-                message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
-            )
+            errmsg = recv[3:0-len(self.delimiter)]
+            descriptErr=ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+            msg = f'EspecError: command:"{message}" generated Error:"{errmsg}"({descriptErr})'
+            #msg = 'EspecError: command:"{}" generated Error:"{}"({})'.format(
+            #    message, errmsg, ERROR_DESCIPTIONS.get(errmsg, 'missing description')
+            #)
             raise EspecError(msg)
         return recv[:-2]
